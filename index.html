@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Pinterest Downloader – Fully Browser Based</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white min-h-screen p-8 flex flex-col items-center">
+
+  <h1 class="text-3xl font-bold bg-gradient-to-r from-pink-500 to-purple-500 text-transparent bg-clip-text mb-4">
+    Pinterest Downloader 
+  </h1>
+
+  <input id="urlInput" type="url" placeholder="Paste Pinterest URL (not pin.it)"
+         class="w-full max-w-xl mb-4 p-3 rounded bg-gray-800 border border-gray-600" required>
+
+  <select id="contentType" class="mb-4 p-3 rounded bg-gray-800 border border-gray-600">
+    <option value="">Select Type</option>
+    <option value="video">Video</option>
+    <option value="image">Image</option>
+  </select>
+
+  <button id="analyzeBtn" class="bg-blue-600 px-6 py-2 rounded hover:bg-blue-700 font-bold" disabled>
+    Analyze
+  </button>
+
+  <p id="status" class="mt-4 text-sm text-gray-400">🔄 Loading Python environment...</p>
+
+  <div id="result" class="mt-6 hidden flex flex-col items-center">
+    <video id="videoPreview" class="max-w-full rounded mb-4 hidden" controls></video>
+    <img id="imagePreview" class="max-w-full rounded mb-4 hidden"/>
+    <a id="downloadLink" href="#" download target="_blank"
+       class="bg-green-600 px-6 py-2 rounded hover:bg-green-700 font-bold">
+      Download
+    </a>
+  </div>
+
+  <!-- Pyodide -->
+  <script type="module">
+    import { loadPyodide } from "https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.mjs";
+
+    let pyodide;
+
+    async function initPyodide() {
+      pyodide = await loadPyodide();
+      await pyodide.loadPackage("micropip");
+      await pyodide.runPythonAsync(`import re`);
+      document.getElementById("analyzeBtn").disabled = false;
+      document.getElementById("status").textContent = "✅ Python is ready!";
+    }
+
+    initPyodide();
+
+    document.getElementById("analyzeBtn").addEventListener("click", async () => {
+      const rawUrl = document.getElementById("urlInput").value.trim();
+      const type = document.getElementById("contentType").value;
+      const status = document.getElementById("status");
+      const result = document.getElementById("result");
+      const video = document.getElementById("videoPreview");
+      const image = document.getElementById("imagePreview");
+      const download = document.getElementById("downloadLink");
+
+      result.classList.add("hidden");
+      video.classList.add("hidden");
+      image.classList.add("hidden");
+
+      if (!rawUrl || !type) {
+        alert("Please provide both URL and content type.");
+        return;
+      }
+
+      status.textContent = "🔄 Processing link...";
+
+      let finalUrl = rawUrl;
+
+      // Step 1: Unshorten pin.it links
+      if (rawUrl.includes("pin.it")) {
+        try {
+          const resp = await fetch("https://unshorten.me/json/" + encodeURIComponent(rawUrl));
+          const data = await resp.json();
+          if (data.success && data.resolved_url) {
+            finalUrl = data.resolved_url;
+            status.textContent = "🔗 Unshortened to full Pinterest URL.";
+          } else {
+            throw new Error("Could not unshorten pin.it link.");
+          }
+        } catch (e) {
+          status.textContent = "❌ Failed to unshorten pin.it URL.";
+          return;
+        }
+      }
+
+      // Step 2: Try fetching the page from fallback proxies
+      const proxies = [
+        "https://api.allorigins.win/raw?url=",
+        "https://thingproxy.freeboard.io/fetch/",
+        "https://yacdn.org/proxy/"
+      ];
+
+      let html = null;
+      for (const proxy of proxies) {
+        try {
+          const res = await fetch(proxy + encodeURIComponent(finalUrl));
+          if (res.ok) {
+            html = await res.text();
+            break;
+          }
+        } catch (_) {}
+      }
+
+      if (!html) {
+        status.textContent = "❌ Failed to fetch Pinterest page through any proxy.";
+        return;
+      }
+
+      // Step 3: Run Python regex extraction
+      try {
+        pyodide.globals.set("html_content", html);
+        pyodide.globals.set("content_type", type);
+
+        const pyCode = `
+import re
+
+def extract(html, content_type):
+    if content_type == "video":
+        m = re.search(r'"url":"(https://v\\d+\\.pinimg\\.com/videos/[^"]+\\.mp4)"', html)
+        if m:
+            return m.group(1).replace('\\\\', '')
+    else:
+        patterns = [
+            r'<meta property="og:image" content="([^"]+)"',
+            r'"originalImage":\\s*{\\s*"url":\\s*"([^"]+)"',
+            r'"url":"(https://i\\.pinimg\\.com/originals/[^"]+)"'
+        ]
+        for p in patterns:
+            m = re.search(p, html)
+            if m:
+                return m.group(1).replace('\\\\', '')
+    return None
+
+result = extract(html_content, content_type)
+        `;
+
+        await pyodide.runPythonAsync(pyCode);
+        const resultUrl = pyodide.globals.get("result");
+
+        if (!resultUrl) {
+          status.textContent = "❌ No valid media content found.";
+          return;
+        }
+
+        // Show result
+        download.href = resultUrl;
+        result.classList.remove("hidden");
+
+        if (type === "video") {
+          video.src = resultUrl;
+          video.classList.remove("hidden");
+        } else {
+          image.src = resultUrl;
+          image.classList.remove("hidden");
+        }
+
+        status.textContent = "✅ Download ready!";
+      } catch (err) {
+        status.textContent = "❌ Python processing failed.";
+        console.error(err);
+      }
+    });
+  </script>
+</body>
+</html>
+<!--
+  This HTML file is a simple Pinterest downloader that uses Pyodide to run Python code in the browser.
+  It allows users to paste a Pinterest URL, select the content type (video or image), and download the media.
+  The script handles unshortening pin.it links and fetching the page content through various proxies.
+  The regex extraction is done using Python code executed in the browser via Pyodide.
