@@ -33,6 +33,7 @@
   </div>
 
   <div id="result" class="mt-6 hidden flex flex-col items-center">
+     <canvas id="glowCanvas"></canvas>
     <video id="videoPreview" class="max-w-full rounded mb-4 hidden" controls></video>
     <img id="imagePreview" class="max-w-full rounded mb-4 hidden"/>
     <a id="downloadLink" href="#" download target="_blank"
@@ -42,6 +43,31 @@
   </div>
 
   <style>
+    #result {
+      position: relative;
+      display: inline-block;
+    }
+
+    #glowCanvas {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(1.05);
+      filter: blur(60px) brightness(1.3);
+      opacity: 0.6;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    #videoPreview {
+      display: block;
+      position: relative;
+      z-index: 1;
+      border-radius: 12px;
+      /* box-shadow: 0 0 40px rgba(0, 0, 0, 0.4); */
+      max-height: 90vh;
+      max-width: 90vw;
+    }
   @keyframes skeleton-shine {
     100% {
       background-position: -200% 0;
@@ -54,6 +80,37 @@
     animation: skeleton-shine 1.5s ease-in-out infinite;
   }
 </style>
+
+  <script>
+     const video = document.getElementById("videoPreview");
+    const canvas = document.getElementById("glowCanvas");
+    const ctx = canvas.getContext("2d");
+
+    function syncCanvasSizeToVideo() {
+      const w = video.videoWidth;
+      const h = video.videoHeight;
+      canvas.width = w;
+      canvas.height = h;
+
+      // Scale the canvas element in CSS to match the resized video
+      canvas.style.width = video.offsetWidth + 'px';
+      canvas.style.height = video.offsetHeight + 'px';
+    }
+
+    function drawVideoToCanvas() {
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      requestAnimationFrame(drawVideoToCanvas);
+    }
+
+    video.addEventListener("loadedmetadata", () => {
+      syncCanvasSizeToVideo();
+      requestAnimationFrame(drawVideoToCanvas);
+    });
+
+    window.addEventListener("resize", () => {
+      syncCanvasSizeToVideo();
+    });
+  </script>
 
 
   <!-- Pyodide -->
