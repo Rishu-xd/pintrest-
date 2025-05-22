@@ -26,6 +26,11 @@
   </button>
 
   <p id="status" class="mt-4 text-sm text-gray-400">🔄 Loading Python environment...</p>
+  <!-- Skeleton Placeholder -->
+  <div id="skeletonLoader" class="hidden bg-gray-800 rounded-xl p-4 shadow animate-pulse w-full max-w-lg mb-6">
+    <div class="aspect-video bg-gray-700 rounded"></div>
+    <div class="h-5 w-24 bg-gray-700 rounded mt-4 mx-auto"></div>
+  </div>
 
   <div id="result" class="mt-6 hidden flex flex-col items-center">
     <video id="videoPreview" class="max-w-full rounded mb-4 hidden" controls></video>
@@ -35,6 +40,21 @@
       Download
     </a>
   </div>
+
+  <style>
+  @keyframes skeleton-shine {
+    100% {
+      background-position: -200% 0;
+    }
+  }
+
+  .skeleton-loader {
+    background: linear-gradient(90deg, #1f2937 25%, #374151 50%, #1f2937 75%);
+    background-size: 400% 100%;
+    animation: skeleton-shine 1.5s ease-in-out infinite;
+  }
+</style>
+
 
   <!-- Pyodide -->
   <script type="module">
@@ -60,6 +80,12 @@
       const video = document.getElementById("videoPreview");
       const image = document.getElementById("imagePreview");
       const download = document.getElementById("downloadLink");
+      const skeleton = document.getElementById("skeletonLoader");
+      const preview = document.getElementById("previewContainer");
+
+      skeleton.classList.remove("hidden");
+      preview.classList.add("hidden");
+
 
       result.classList.add("hidden");
       video.classList.add("hidden");
@@ -153,6 +179,8 @@ result = extract(html_content, content_type)
         // Show result
         download.href = resultUrl;
         result.classList.remove("hidden");
+        skeleton.classList.add("hidden");
+        preview.classList.remove("hidden");
 
         if (type === "video") {
           video.src = resultUrl;
