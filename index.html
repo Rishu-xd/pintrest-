@@ -5,44 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Pinterest Downloader – Fully Browser Based</title>
   <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-gray-900 text-white min-h-screen p-8 flex flex-col items-center">
-
-  <h1 class="text-3xl font-bold bg-gradient-to-r from-pink-500 to-purple-500 text-transparent bg-clip-text mb-4">
-    Pinterest Downloader 
-  </h1>
-
-  <input id="urlInput" type="url" placeholder="Paste Pinterest URL (not pin.it)"
-         class="w-full max-w-xl mb-4 p-3 rounded bg-gray-800 border border-gray-600" required>
-
-  <select id="contentType" class="mb-4 p-3 rounded bg-gray-800 border border-gray-600">
-    <option value="">Select Type</option>
-    <option value="video">Video</option>
-    <option value="image">Image</option>
-  </select>
-
-  <button id="analyzeBtn" class="bg-blue-600 px-6 py-2 rounded hover:bg-blue-700 font-bold" disabled>
-    Analyze
-  </button>
-
-  <p id="status" class="mt-4 text-sm text-gray-400">🔄 Loading Python environment...</p>
-  <!-- Skeleton Placeholder -->
-  <div id="skeletonLoader" class="hidden bg-gray-800 rounded-xl p-4 shadow animate-pulse w-full max-w-lg mb-6">
-    <div class="aspect-video bg-gray-700 rounded"></div>
-    <div class="h-5 w-24 bg-gray-700 rounded mt-4 mx-auto"></div>
-  </div>
-
-  <div id="result" class="mt-6 hidden flex flex-col items-center">
-     <canvas id="glowCanvas"></canvas>
-    <video id="videoPreview" class="max-w-full rounded mb-4 hidden" controls></video>
-    <img id="imagePreview" class="max-w-full rounded mb-4 hidden"/>
-    <a id="downloadLink" href="#" download target="_blank"
-       class="bg-green-600 px-6 py-2 rounded hover:bg-green-700 font-bold">
-      Download
-    </a>
-  </div>
-
   <style>
+    body {
+      background-color: #111827;
+    }
     #result {
       position: relative;
       display: inline-block;
@@ -64,25 +30,63 @@
       position: relative;
       z-index: 1;
       border-radius: 12px;
-      /* box-shadow: 0 0 40px rgba(0, 0, 0, 0.4); */
       max-height: 90vh;
       max-width: 90vw;
     }
-  @keyframes skeleton-shine {
-    100% {
-      background-position: -200% 0;
+
+    @keyframes skeleton-shine {
+      100% {
+        background-position: -200% 0;
+      }
     }
-  }
 
-  .skeleton-loader {
-    background: linear-gradient(90deg, #1f2937 25%, #374151 50%, #1f2937 75%);
-    background-size: 400% 100%;
-    animation: skeleton-shine 1.5s ease-in-out infinite;
-  }
-</style>
+    .skeleton-loader {
+      background: linear-gradient(90deg, #1f2937 25%, #374151 50%, #1f2937 75%);
+      background-size: 400% 100%;
+      animation: skeleton-shine 1.5s ease-in-out infinite;
+    }
+  </style>
+</head>
+<body class="text-white min-h-screen p-8 flex flex-col items-center">
 
+  <h1 class="text-3xl font-bold bg-gradient-to-r from-pink-500 to-purple-500 text-transparent bg-clip-text mb-4">
+    Pinterest Downloader
+  </h1>
+
+  <input id="urlInput" type="url" placeholder="Paste Pinterest URL (not pin.it)"
+         class="w-full max-w-xl mb-4 p-3 rounded bg-gray-800 border border-gray-600" required>
+
+  <select id="contentType" class="mb-4 p-3 rounded bg-gray-800 border border-gray-600">
+    <option value="">Select Type</option>
+    <option value="video">Video</option>
+    <option value="image">Image</option>
+  </select>
+
+  <button id="analyzeBtn" class="bg-blue-600 px-6 py-2 rounded hover:bg-blue-700 font-bold" disabled>
+    Analyze
+  </button>
+
+  <p id="status" class="mt-4 text-sm text-gray-400">🔄 Loading Python environment...</p>
+
+  <!-- Skeleton Placeholder -->
+  <div id="skeletonLoader" class="hidden bg-gray-800 rounded-xl p-4 shadow animate-pulse w-full max-w-lg mb-6">
+    <div class="aspect-video bg-gray-700 rounded"></div>
+    <div class="h-5 w-24 bg-gray-700 rounded mt-4 mx-auto"></div>
+  </div>
+
+  <div id="result" class="mt-6 hidden flex flex-col items-center">
+    <canvas id="glowCanvas"></canvas>
+    <video id="videoPreview" class="max-w-full rounded mb-4 hidden" controls></video>
+    <img id="imagePreview" class="max-w-full rounded mb-4 hidden"/>
+    <a id="downloadLink" href="#" download target="_blank"
+       class="bg-green-600 px-6 py-2 rounded hover:bg-green-700 font-bold">
+      Download
+    </a>
+  </div>
+
+  <!-- Video Glow Canvas Script -->
   <script>
-     const video = document.getElementById("videoPreview");
+    const video = document.getElementById("videoPreview");
     const canvas = document.getElementById("glowCanvas");
     const ctx = canvas.getContext("2d");
 
@@ -91,8 +95,6 @@
       const h = video.videoHeight;
       canvas.width = w;
       canvas.height = h;
-
-      // Scale the canvas element in CSS to match the resized video
       canvas.style.width = video.offsetWidth + 'px';
       canvas.style.height = video.offsetHeight + 'px';
     }
@@ -111,7 +113,6 @@
       syncCanvasSizeToVideo();
     });
   </script>
-
 
   <!-- Pyodide -->
   <script type="module">
@@ -138,12 +139,8 @@
       const image = document.getElementById("imagePreview");
       const download = document.getElementById("downloadLink");
       const skeleton = document.getElementById("skeletonLoader");
-      const preview = document.getElementById("previewContainer");
 
       skeleton.classList.remove("hidden");
-      preview.classList.add("hidden");
-
-
       result.classList.add("hidden");
       video.classList.add("hidden");
       image.classList.add("hidden");
@@ -157,7 +154,7 @@
 
       let finalUrl = rawUrl;
 
-      // Step 1: Unshorten pin.it links
+      // Unshorten pin.it links
       if (rawUrl.includes("pin.it")) {
         try {
           const resp = await fetch("https://unshorten.me/json/" + encodeURIComponent(rawUrl));
@@ -174,7 +171,6 @@
         }
       }
 
-      // Step 2: Try fetching the page from fallback proxies
       const proxies = [
         "https://api.allorigins.win/raw?url=",
         "https://thingproxy.freeboard.io/fetch/",
@@ -197,7 +193,7 @@
         return;
       }
 
-      // Step 3: Run Python regex extraction
+      // Run Python regex
       try {
         pyodide.globals.set("html_content", html);
         pyodide.globals.set("content_type", type);
@@ -235,16 +231,18 @@ result = extract(html_content, content_type)
 
         // Show result
         download.href = resultUrl;
-        result.classList.remove("hidden");
+        download.style.display = "inline-block";
         skeleton.classList.add("hidden");
-        preview.classList.remove("hidden");
+        result.classList.remove("hidden");
 
         if (type === "video") {
           video.src = resultUrl;
           video.classList.remove("hidden");
+          canvas.style.display = "block";
         } else {
           image.src = resultUrl;
           image.classList.remove("hidden");
+          canvas.style.display = "none";
         }
 
         status.textContent = "✅ Download ready!";
@@ -256,8 +254,3 @@ result = extract(html_content, content_type)
   </script>
 </body>
 </html>
-<!--
-  This HTML file is a simple Pinterest downloader that uses Pyodide to run Python code in the browser.
-  It allows users to paste a Pinterest URL, select the content type (video or image), and download the media.
-  The script handles unshortening pin.it links and fetching the page content through various proxies.
-  The regex extraction is done using Python code executed in the browser via Pyodide.
